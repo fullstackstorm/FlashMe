@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+certifi = "*"
+charset-normalizer = "*"
+distlib = "*"
+filelock = "*"
+idna = "*"
+numpy = "*"
+pandas = "*"
+pipenv = "*"
+platformdirs = "*"
+python-dateutil = "*"
+pytz = "*"
+pywin32 = "*"
+requests = "*"
+setuptools = "*"
+six = "*"
+tzdata = "*"
+urllib3 = "*"
+virtualenv = "*"
+wheel = "*"
+xlwings = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"

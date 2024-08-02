@@ -1,0 +1,54 @@
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+
+# Distribution and build directories
+dist/
+build/
+*.egg
+*.egg-info/
+
+# IDE/editor directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Database files
+*.sqlite3
+*.db
+
+# Coverage reports
+.coverage
+coverage.xml
+*.cover
+
+# Test results
+.tox/
+.nox/
+*.coverage
+nosetests.xml
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Backup files
+*~
+
+# But include common debugging settings
+!.vscode/launch.json
