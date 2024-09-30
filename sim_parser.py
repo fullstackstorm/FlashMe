@@ -36,7 +36,7 @@ class sim_oven:
             else '+OR+'.join(value for value in self.process_folder_dictionary.values())
         )
         sim_status = 'Resolved'
-        date_range = date_range_map.get(process_name, '[NOW-28DAYS TO NOW]')
+        date_range = date_range_map.get(process_name, '[NOW-15DAYS TO NOW]')
         sort_order = 'lastUpdatedDate+desc'
         self._sim_endpoint = f'issues?q=containingFolder:({process_id})+status:({sim_status})+createDate:({date_range})&sort={sort_order}'
 
@@ -93,3 +93,6 @@ class sim_oven:
         for checkbox in checkbox_list['value']:
             if checkbox['checked'] == True: cooked_checkboxes += f'{checkbox['value']},'
         return cooked_checkboxes
+    
+    def getCiNci(self, missDf):
+        
