@@ -85,7 +85,7 @@ class sim_oven:
     def __cook_data_status(self, string_list):
         cooked_data_status = ''
         for string in string_list:
-            if string['id'] == 'data_status': cooked_data_status += string['id']; break
+            if string['id'] == 'data_status': cooked_data_status += string['value']; break
         return cooked_data_status
     
     def __cook_checkboxes(self, checkbox_list):
