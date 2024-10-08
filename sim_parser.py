@@ -65,6 +65,9 @@ class sim_oven:
                             self.cooked_sim_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values                    
                         elif checkbox['id'] == 'sla_miss':
                             self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = checked_values
+                sla_string = self.__cook_string_sla_miss(raw_sim['customFields']['string'])
+                if sla_string!= '':
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = self.__cook_string_sla_miss(raw_sim['customFields']['string'])
             self._cooked_sim_list_row += 1
         print(f'Downloaded {self._cooked_sim_list_row}/{self._raw_sim_list['totalNumberFound']} {process_name} SIMs')
         if self._start_token != '': self.__cook(process_name)
@@ -93,3 +96,9 @@ class sim_oven:
         for checkbox in checkbox_list['value']:
             if checkbox['checked'] == True: cooked_checkboxes += f'{checkbox['value']},'
         return cooked_checkboxes
+    
+    def __cook_string_sla_miss(self, string_list):
+        cooked_sla_miss = ''
+        for string in string_list:
+            if string['id'] == 'sla_miss' and string['value'] != 'N/A': cooked_sla_miss = string['value']; break
+        return cooked_sla_miss

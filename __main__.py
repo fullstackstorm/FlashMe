@@ -17,11 +17,13 @@ if __name__ == '__main__':
         with xlwings.App(visible = False):   
             work_sheet = work_book.sheets(process)
             work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list
-    # oven.cook('FIF')
+
+    # oven.cook('SWA_Paragon')
     # with xlwings.App(visible=False):
-    #     work_sheet = work_book.sheets('FIF')
+    #     work_sheet = work_book.sheets('SWA_Paragon')
     #     work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list
-    # oven.labels.save()
+
+    oven.labels.save()
     work_book.macro('Generate_Email_Report')()
     work_book.save()
     #work_book.close()
