@@ -27,16 +27,16 @@ class sim_oven:
         self.__cook(process_name)
 
     def __init_sim_endpoint(self, process_name):
-        date_range_map = {
-            'FIF' : '[NOW-123DAYS TO NOW]',
-            'ORSA_Intervention' : '[NOW-123DAYS TO NOW]'
-        }
+        # date_range_map = {
+        #     'FIF' : '[NOW-123DAYS TO NOW]',
+        #     'ORSA_Intervention' : '[NOW-123DAYS TO NOW]'
+        # }
         process_id = (
             self.process_folder_dictionary[process_name] if process_name != ''
             else '+OR+'.join(value for value in self.process_folder_dictionary.values())
         )
         sim_status = 'Resolved'
-        date_range = date_range_map.get(process_name, '[NOW-28DAYS TO NOW]')
+        date_range = '[NOW-99DAYS TO NOW-7DAYS]'# date_range_map.get(process_name, '[NOW-99DAYS TO NOW-7]')
         sort_order = 'lastUpdatedDate+desc'
         self._sim_endpoint = f'issues?q=containingFolder:({process_id})+status:({sim_status})+createDate:({date_range})&sort={sort_order}'
 
