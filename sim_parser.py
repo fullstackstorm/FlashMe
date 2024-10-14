@@ -36,7 +36,7 @@ class sim_oven:
             else '+OR+'.join(value for value in self.process_folder_dictionary.values())
         )
         sim_status = 'Resolved'
-        date_range = '[NOW-99DAYS TO NOW-7DAYS]'# date_range_map.get(process_name, '[NOW-99DAYS TO NOW-7]')
+        date_range = '[NOW-104DAYS TO NOW]'# date_range_map.get(process_name, '[NOW-99DAYS TO NOW-7]')
         sort_order = 'lastUpdatedDate+desc'
         self._sim_endpoint = f'issues?q=containingFolder:({process_id})+status:({sim_status})+createDate:({date_range})&sort={sort_order}'
 
