@@ -24,7 +24,7 @@ if __name__ == '__main__':
     #     work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list
 
     oven.labels.save()
-    #work_book.macro('Generate_Email_Report')()
+    work_book.macro('Generate_Email_Report')()
     work_book.save()
     #work_book.close()
 
