@@ -55,7 +55,6 @@ class sim_oven:
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Title'] = raw_sim['title']
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Labels'] = self.__cook_labels(raw_sim['labels'])
             if 'customFields' in raw_sim:
-                self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] = self.__cook_data_status(raw_sim['customFields']['string'])
                 if 'checkbox' in raw_sim['customFields']:
                     for checkbox in raw_sim['customFields']['checkbox']:
                         checked_values = self.__cook_checkboxes(checkbox)
@@ -65,8 +64,8 @@ class sim_oven:
                             self.cooked_sim_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values                    
                         elif checkbox['id'] == 'sla_miss':
                             self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = checked_values
-                sla_string = self.__cook_string_sla_miss(raw_sim['customFields']['string'])
-                if sla_string!= '':
+                if 'string' in raw_sim['customFields']:
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] = self.__cook_data_status(raw_sim['customFields']['string'])
                     self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = self.__cook_string_sla_miss(raw_sim['customFields']['string'])
             self._cooked_sim_list_row += 1
         print(f'Downloaded {self._cooked_sim_list_row}/{self._raw_sim_list['totalNumberFound']} {process_name} SIMs')
