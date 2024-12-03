@@ -20,9 +20,13 @@ class sim_oven:
             value_list = [str(entry.value) for entry in work_sheet['Process_Folder_Dictionary[Value]']]
             for key, value in zip(key_list, value_list): self.process_folder_dictionary[key] = value
 
-    def cook(self, process_name = ''):
-        self.cooked_sim_list.drop(self.cooked_sim_list.index, inplace = True)
-        self._cooked_sim_list_row = 0
+    def cook(self, process_name = '', iteration = 1):
+        self.iteration = iteration
+        if iteration == 1: 
+            self.cooked_sim_list.drop(self.cooked_sim_list.index, inplace = True)
+            self._cooked_sim_list_row = 0
+            self.running_total = 0
+        self.checkpoint = 0
         self.__init_sim_endpoint(process_name)
         self.__cook(process_name)
 
@@ -36,7 +40,15 @@ class sim_oven:
             else '+OR+'.join(value for value in self.process_folder_dictionary.values())
         )
         sim_status = 'Resolved'
-        date_range = '[NOW-104DAYS TO NOW]'# date_range_map.get(process_name, '[NOW-99DAYS TO NOW-7]')
+        date_range = ''
+        if self.iteration == 1:
+            date_range = '[NOW-337DAYS TO NOW-245DAYS]'# date_range_map.get(process_name, '[NOW-99DAYS TO NOW-7]')
+        elif self.iteration == 2:
+            date_range = '[NOW-245DAYS TO NOW-155DAYS]'
+        elif self.iteration == 3:
+            date_range = '[NOW-155DAYS TO NOW-93DAYS]'
+        elif self.iteration == 4:
+            date_range = '[NOW-93DAYS TO NOW]'
         sort_order = 'lastUpdatedDate+desc'
         self._sim_endpoint = f'issues?q=containingFolder:({process_id})+status:({sim_status})+createDate:({date_range})&sort={sort_order}'
 
@@ -47,6 +59,9 @@ class sim_oven:
     def __update_raw_sim_list(self):
         self._maxis.get(self._sim_endpoint + self._start_token)
         self._raw_sim_list = loads(self._maxis.response)
+        if self.checkpoint == 0:
+            self.running_total += self._raw_sim_list['totalNumberFound']
+            self.checkpoint = 1
         self._start_token = f'&startToken={self._raw_sim_list['startToken']}' if self._raw_sim_list['startToken'] else ''
 
     def __cook_sims(self, process_name):
@@ -68,7 +83,7 @@ class sim_oven:
                     self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] = self.__cook_data_status(raw_sim['customFields']['string'])
                     self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = self.__cook_string_sla_miss(raw_sim['customFields']['string'])
             self._cooked_sim_list_row += 1
-        print(f'Downloaded {self._cooked_sim_list_row}/{self._raw_sim_list['totalNumberFound']} {process_name} SIMs')
+        print(f'Downloaded {self._cooked_sim_list_row}/{self.running_total} {process_name} SIMs | iteration {self.iteration}')
         if self._start_token != '': self.__cook(process_name)
 
     def __cook_labels(self, label_id_list):

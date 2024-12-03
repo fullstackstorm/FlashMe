@@ -13,7 +13,10 @@ if __name__ == '__main__':
     work_book = xlwings.Book(excel_file)
     work_book.macro('Clear_Sims')()
     for process in oven.process_folder_dictionary.keys():
-        oven.cook(process)
+        oven.cook(process,1)
+        oven.cook(process,2)
+        oven.cook(process,3)
+        oven.cook(process,4)
         with xlwings.App(visible = False):   
             work_sheet = work_book.sheets(process)
             work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list

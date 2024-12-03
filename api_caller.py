@@ -54,7 +54,7 @@ class maxis:
                 else: print('API call failed.')
         self.response = response.content.decode('utf-8')
 
-    def get(self, api_path, api_authority = 'https://maxis-service-prod-pdx.amazon.com/', max_attempts = 5, backoff_factor = 2):
+    def get(self, api_path, api_authority = 'https://maxis-service-prod-pdx.amazon.com/', max_attempts = 10, backoff_factor = 2):
         call_function = lambda: self.__api_handler.get(api_authority + api_path)
         self.__call("GET", call_function, max_attempts, backoff_factor)
 
