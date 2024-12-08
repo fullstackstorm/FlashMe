@@ -23,7 +23,6 @@ class sim_oven:
     def cook(self, process_name = '', iteration = 1):
         self.iteration = iteration
         if iteration == 1: 
-            self.cooked_sim_list.drop(self.cooked_sim_list.index, inplace = True)
             self._cooked_sim_list_row = 0
             self.running_total = 0
         self.checkpoint = 0

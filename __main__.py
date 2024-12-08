@@ -12,14 +12,26 @@ if __name__ == '__main__':
     oven = sim_oven(excel_file)
     work_book = xlwings.Book(excel_file)
     work_book.macro('Clear_Sims')()
+
     for process in oven.process_folder_dictionary.keys():
-        oven.cook(process,1)
-        oven.cook(process,2)
-        oven.cook(process,3)
-        oven.cook(process,4)
-        with xlwings.App(visible = False):   
+        for step in range(1, 5):
+            oven.cook(process, step)
+            
+            # Access the correct worksheet
             work_sheet = work_book.sheets(process)
-            work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list
+            
+            # Find the next empty row in the worksheet
+            last_row = work_sheet.range('A' + str(work_sheet.cells.last_cell.row)).end('up').row
+            
+            # Determine where to paste the data
+            start_row = last_row + 1 if last_row >= 2 else 2
+            
+            # Paste data from the current cooked_sim_list
+            work_sheet.range(f'A{start_row}').options(header=False, index=False).value = oven.cooked_sim_list
+
+            # Clear the DataFrame after pasting
+            oven.cooked_sim_list.drop(oven.cooked_sim_list.index, inplace=True)
+
 
     # oven.cook('ORSA_Valids')
     # with xlwings.App(visible=False):
