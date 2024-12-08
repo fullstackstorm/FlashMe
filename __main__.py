@@ -21,16 +21,21 @@ if __name__ == '__main__':
             work_sheet = work_book.sheets(process)
             
             # Find the next empty row in the worksheet
-            last_row = work_sheet.range('A' + str(work_sheet.cells.last_cell.row)).end('up').row
+            # Ensure the last row is calculated properly
+            last_row = work_sheet.range('A1').end('down').row
             
-            # Determine where to paste the data
-            start_row = last_row + 1 if last_row >= 2 else 2
+            # If the first row is still empty, start at A2
+            if last_row == 1 and not work_sheet.range('A2').value:
+                start_row = 2
+            else:
+                start_row = last_row + 1
             
             # Paste data from the current cooked_sim_list
             work_sheet.range(f'A{start_row}').options(header=False, index=False).value = oven.cooked_sim_list
 
             # Clear the DataFrame after pasting
             oven.cooked_sim_list.drop(oven.cooked_sim_list.index, inplace=True)
+
 
 
     # oven.cook('ORSA_Valids')
