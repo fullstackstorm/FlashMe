@@ -31,26 +31,48 @@ class sim_oven:
         self.__cook(process_name)
 
     def __init_sim_endpoint(self, process_name):
-        # date_range_map = {
-        #     'FIF' : '[NOW-123DAYS TO NOW]',
-        #     'ORSA_Intervention' : '[NOW-123DAYS TO NOW]'
-        # }
         process_id = (
-            self.process_folder_dictionary[process_name] if process_name != ''
+            self.process_folder_dictionary.get(process_name, '')
+            if process_name
             else '+OR+'.join(value for value in self.process_folder_dictionary.values())
         )
-        sim_status = 'Resolved'
-        date_range = ''
-        if self.iteration == 1:
-            date_range = '[NOW-337DAYS TO NOW-245DAYS]'# date_range_map.get(process_name, '[NOW-99DAYS TO NOW-7]')
-        elif self.iteration == 2:
-            date_range = '[NOW-245DAYS TO NOW-155DAYS]'
-        elif self.iteration == 3:
-            date_range = '[NOW-155DAYS TO NOW-93DAYS]'
-        elif self.iteration == 4:
-            date_range = '[NOW-93DAYS TO NOW]'
-        sort_order = 'lastUpdatedDate+desc'
-        self._sim_endpoint = f'issues?q=containingFolder:({process_id})+status:({sim_status})+createDate:({date_range})&sort={sort_order}'
+        
+        process_label_exclusions = [
+            '226e8e9c-1486-451b-9609-07ef2c302b00',
+            '95c6328f-8a83-49b0-a7dc-b47b73f1b4f7',
+            '3a50ffcd-0084-4217-9b90-bbf0e3d8871f',
+            'beadfedd-2c7c-4599-879f-93d435d27f34',
+            '04e2cd43-f916-40bc-aba3-96936b05f4e5',
+            '226e8e9c-1486-451b-9609-07ef2c302b00',
+            '2fa0a86d-3465-4e49-8d2f-8ed682f4e615',
+            '1759e83f-4d79-4d80-ab46-b85ace8d9e85',
+            '8cb7f94b-6805-422b-bf32-5f2238432840',
+            '84ed1b0f-65d8-43ff-af5b-1cb54557c56b',
+            'bf860273-c56a-4a7a-8440-9f30dd07237e',
+            '36b64a96-4457-4166-9553-f656f11dbeb4',
+            '379bcb27-4812-4a5b-85d3-160ff0779060',
+            '4ae952fa-ff2c-4f37-b6f1-59c70cd5e5a7',
+            '44cb5c79-1dda-4b7a-9082-2ceddef0f1e5',
+            '9f89815e-5125-474a-b637-75df57f81a16'
+        ]
+        exclusion_query = ' OR '.join(process_label_exclusions)
+
+        date_ranges = {
+            1: '[2024-01-01T07:00:00.000Z TO 2024-04-01T06:59:00.000Z]',
+            2: '[2024-04-01T07:00:00.000Z TO 2024-07-01T06:59:00.000Z]',
+            3: '[2024-07-01T07:00:00.000Z TO 2024-10-01T06:59:00.000Z]',
+            4: '[2024-10-01T07:00:00.000Z TO NOW]'
+        }
+        date_range = date_ranges.get(self.iteration, '')
+
+        folder_query = f'containingFolder:({process_id})'
+        status_query = f'status:(Resolved)'
+        date_query = f'createDate:({date_range})'
+        title_exclusion = '-title:(partial OR pilot OR training OR test)'
+        label_exclusion = f'-label:({exclusion_query})'
+        sort_query = 'sort=lastUpdatedDate+desc'
+
+        self._sim_endpoint = f'issues?q={folder_query}+{status_query}+{date_query}+{title_exclusion}+{label_exclusion}&{sort_query}'
 
     def __cook(self, process_name):
         self.__update_raw_sim_list()
