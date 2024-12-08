@@ -41,8 +41,12 @@ class sim_oven:
         self._sim_endpoint = f'issues?q=containingFolder:({process_id})+status:({sim_status})+createDate:({date_range})&sort={sort_order}'
 
     def __cook(self, process_name):
-        self.__update_raw_sim_list()
-        self.__cook_sims(process_name)
+        while True:
+            self.__update_raw_sim_list()
+            self.__cook_sims(process_name)
+
+            if not self._start_token:
+                break
     
     def __update_raw_sim_list(self):
         self._maxis.get(self._sim_endpoint + self._start_token)
@@ -51,25 +55,37 @@ class sim_oven:
 
     def __cook_sims(self, process_name):
         for raw_sim in self._raw_sim_list['documents']:
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Issue Url'] = f'https://issues.amazon.com/issues/{raw_sim['aliases'][0]['id']}'
+            issue_url = f'https://issues.amazon.com/issues/{raw_sim["aliases"][0]["id"]}'
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Issue Url'] = issue_url
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Title'] = raw_sim['title']
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Labels'] = self.__cook_labels(raw_sim['labels'])
+
+            # Process custom fields if they exist
             if 'customFields' in raw_sim:
-                if 'checkbox' in raw_sim['customFields']:
-                    for checkbox in raw_sim['customFields']['checkbox']:
-                        checked_values = self.__cook_checkboxes(checkbox)
-                        if checkbox['id'] == 'operator_follow_up_miss' or checkbox['id'] == 'operator_follow_up_miss_':
-                            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Operator Follow-up Miss'] = checked_values
-                        elif checkbox['id'] == 'false_resolution' or checkbox['id'] == 'miss' or checkbox['id'] == 'false_resolution_miss':
-                            self.cooked_sim_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values                    
-                        elif checkbox['id'] == 'sla_miss':
-                            self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = checked_values
-                if 'string' in raw_sim['customFields']:
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] = self.__cook_data_status(raw_sim['customFields']['string'])
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = self.__cook_string_sla_miss(raw_sim['customFields']['string'])
+                self.__process_custom_fields(raw_sim['customFields'])
+
             self._cooked_sim_list_row += 1
-        print(f'Downloaded {self._cooked_sim_list_row}/{self._raw_sim_list['totalNumberFound']} {process_name} SIMs')
-        if self._start_token != '': self.__cook(process_name)
+
+        total_found = self._raw_sim_list['totalNumberFound']
+        print(f'Downloaded {self._cooked_sim_list_row}/{total_found} {process_name} SIMs')
+
+    def __process_custom_fields(self, custom_fields):
+        if 'checkbox' in custom_fields:
+            for checkbox in custom_fields['checkbox']:
+                checked_values = self.__cook_checkboxes(checkbox)
+                checkbox_id = checkbox['id']
+
+                if checkbox_id in {'operator_follow_up_miss', 'operator_follow_up_miss_'}:
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'Operator Follow-up Miss'] = checked_values
+                elif checkbox_id in {'false_resolution', 'miss', 'false_resolution_miss'}:
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values
+                elif checkbox_id == 'sla_miss':
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = checked_values
+
+        if 'string' in custom_fields:
+            string_fields = custom_fields['string']
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] = self.__cook_data_status(string_fields)
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = self.__cook_string_sla_miss(string_fields)
 
     def __cook_labels(self, label_id_list):
         cooked_labels = new_label_id_list = ''
