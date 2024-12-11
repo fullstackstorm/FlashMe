@@ -13,15 +13,17 @@ if __name__ == '__main__':
     work_book = xlwings.Book(excel_file)
     work_book.macro('Clear_Sims')()
     for process in oven.process_folder_dictionary.keys():
-        oven.cook(process)
+        oven.process = process
+        oven.cook()
         with xlwings.App(visible = False):   
             work_sheet = work_book.sheets(process)
-            work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list
+            work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_list
 
-    # oven.cook('ORSA_Valids')
+    # oven.process = ('ORSA_Warnings_Miss')
+    # oven.cook()
     # with xlwings.App(visible=False):
-    #     work_sheet = work_book.sheets('ORSA_Valids')
-    #     work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_sim_list
+    #     work_sheet = work_book.sheets('ORSA_Warnings_Miss')
+    #     work_sheet.range('A2').options(header = False, index = False).value = oven.cooked_list
 
     oven.labels.save()
     work_book.macro('Generate_Email_Report')()
