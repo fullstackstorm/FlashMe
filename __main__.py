@@ -25,7 +25,7 @@ if __name__ == '__main__':
             last_row = work_sheet.range('A1').end('down').row
             
             # If the first row is still empty, start at A2
-            if last_row == 1 and not work_sheet.range('A2').value:
+            if step == 1:
                 start_row = 2
             else:
                 start_row = last_row + 1
