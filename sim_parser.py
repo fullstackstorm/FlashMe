@@ -5,7 +5,10 @@ from labels_handler import label
 
 class sim_oven:
     def __init__(self, excel_file):
-        self.cooked_sim_list = pandas.DataFrame(columns = ['Issue Url', 'Title', 'Labels', 'Data Status', 'Operator Follow-up Miss', 'False Resolution Miss', 'SLA Miss'])
+        self.process = ''
+        self.cooked_sim_list = pandas.DataFrame(columns = ['Folder ID', 'Issue Url', 'Title', 'Labels', 'Data Status', 'Operator Follow-up Miss', 'False Resolution Miss', 'SLA Miss', 'Associate Login', 'Resolver Identity'])
+        self.cooked_sim_list_ORSA = pandas.DataFrame(columns = ['Folder ID', 'Issue Url', 'Title', 'Labels', 'Data Status', 'Operator Follow-up Miss', 'False Resolution Miss', 'SLA Miss', 'Associate Login', 'Resolver Identity'])
+        self.cooked_list = None
         self.labels = label(excel_file)
         self._maxis = maxis()
         self._sim_endpoint = self._start_token = ''
@@ -57,23 +60,26 @@ class sim_oven:
         exclusion_query = ' OR '.join(process_label_exclusions)
 
         date_ranges = {
-            1: '[2023-12-29T07:00:00.000Z TO 2024-03-01T06:59:00.000Z]',
-            2: '[2024-03-01T07:00:00.000Z TO 2024-05-01T06:59:00.000Z]',
-            3: '[2024-05-01T07:00:00.000Z TO 2024-07-01T06:59:00.000Z]',
-            4: '[2024-07-01T07:00:00.000Z TO 2024-09-01T06:59:00.000Z]',
-            5: '[2024-09-01T07:00:00.000Z TO 2024-11-01T06:59:00.000Z]',
-            6: '[2024-11-01T07:00:00.000Z TO NOW]',
+            1: '[2023-12-29T07:00:00.000Z TO 2024-02-09T06:59:59.999Z]',
+            2: '[2024-02-09T07:00:00.000Z TO 2024-03-20T06:59:59.999Z]',
+            3: '[2024-03-20T07:00:00.000Z TO 2024-04-29T06:59:59.999Z]',
+            4: '[2024-04-29T07:00:00.000Z TO 2024-06-08T06:59:59.999Z]',
+            5: '[2024-06-08T07:00:00.000Z TO 2024-07-18T06:59:59.999Z]',
+            6: '[2024-07-18T07:00:00.000Z TO 2024-08-27T06:59:59.999Z]',
+            7: '[2024-08-27T07:00:00.000Z TO 2024-10-06T06:59:59.999Z]',
+            8: '[2024-10-06T07:00:00.000Z TO 2024-11-15T06:59:59.999Z]',
+            9: '[2024-11-15T07:00:00.000Z TO NOW]'
         }
         date_range = date_ranges.get(self.iteration, '')
 
-        folder_query = f'containingFolder:({process_id})'
-        status_query = f'status:(Resolved)'
+        folder_query = f'labels:({process_id})' if self.process == "ORSA_Dashboard" else f'containingFolder:({process_id})'
+        status_query = '' if self.process == "ORSA_Dashboard" else "+status:(Resolved)"
         date_query = f'createDate:({date_range})'
-        title_exclusion = '-title:(partial OR pilot OR training OR test)'
+        title_exclusion = '-title:(partial OR pilot OR training OR test OR 2023 OR DSP Site'
         label_exclusion = f'-label:({exclusion_query})'
         sort_query = 'sort=lastUpdatedDate+desc'
 
-        self._sim_endpoint = f'issues?q={folder_query}+{status_query}+{date_query}+{title_exclusion}+{label_exclusion}&{sort_query}'
+        self._sim_endpoint = f'issues?q={folder_query}{status_query}+{date_query}+{title_exclusion}+{label_exclusion}&{sort_query}'
 
     def __cook(self, process_name):
         while True:
@@ -94,9 +100,11 @@ class sim_oven:
     def __cook_sims(self, process_name):
         for raw_sim in self._raw_sim_list['documents']:
             issue_url = f'https://issues.amazon.com/issues/{raw_sim["aliases"][0]["id"]}'
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Folder ID'] = raw_sim['assignedFolder']
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Issue Url'] = issue_url
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Title'] = raw_sim['title']
             self.cooked_sim_list.at[self._cooked_sim_list_row, 'Labels'] = self.__cook_labels(raw_sim['labels'])
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Resolver Identity'] = raw_sim['lastResolvedByIdentity'].lower().removeprefix('kerberos:').removesuffix('@ant.amazon.com').strip()
 
             # Process custom fields if they exist
             if 'customFields' in raw_sim:
@@ -112,17 +120,20 @@ class sim_oven:
                 checked_values = self.__cook_checkboxes(checkbox)
                 checkbox_id = checkbox['id']
 
-                if checkbox_id in {'operator_follow_up_miss', 'operator_follow_up_miss_'}:
+                if checkbox_id in {'operator_follow_up_miss', 'operator_follow_up_miss_', 'opertor_follow_up_miss'}:
                     self.cooked_sim_list.at[self._cooked_sim_list_row, 'Operator Follow-up Miss'] = checked_values
                 elif checkbox_id in {'false_resolution', 'miss', 'false_resolution_miss'}:
                     self.cooked_sim_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values
                 elif checkbox_id == 'sla_miss':
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = checked_values
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] += checked_values + ", "
+                elif checkbox_id == 'data_status':
+                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] += checked_values + ", "
 
         if 'string' in custom_fields:
             string_fields = custom_fields['string']
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] = self.__cook_data_status(string_fields)
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] = self.__cook_string_sla_miss(string_fields)
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] += self.__cook_data_status(string_fields)
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] += self.__cook_string_sla_miss(string_fields)
+            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Associate Login'] = self.__cook_aa_login(string_fields)
 
     def __cook_labels(self, label_id_list):
         cooked_labels = new_label_id_list = ''
@@ -154,3 +165,9 @@ class sim_oven:
         for string in string_list:
             if string['id'] == 'sla_miss' and string['value'] != 'N/A': cooked_sla_miss = string['value']; break
         return cooked_sla_miss
+    
+    def __cook_aa_login(self, string_list):
+        cooked_aa_login = ''
+        for string in string_list:
+            if string['id'] == 'crc_alias' or string['id'] == 'aa_login' or string['id'] == 'aa_login1' or string['id'] == "co_in_associate" or string['id'] == "scheduled_by_email_alias" or string['id'] == "associate_login": cooked_aa_login += string['value'].lower().removesuffix("@amazon.com"); break
+        return cooked_aa_login

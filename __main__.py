@@ -14,7 +14,7 @@ if __name__ == '__main__':
     work_book.macro('Clear_Sims')()
 
     for process in oven.process_folder_dictionary.keys():
-        for step in range(1, 7):
+        for step in range(1, 10):
             oven.cook(process, step)
             
             # Access the correct worksheet
