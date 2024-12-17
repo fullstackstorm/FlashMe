@@ -15,7 +15,8 @@ if __name__ == '__main__':
 
     for process in oven.process_folder_dictionary.keys():
         for step in range(1, 10):
-            oven.cook(process, step)
+            oven.process = process
+            oven.cook(step)
             
             # Access the correct worksheet
             work_sheet = work_book.sheets(process)
@@ -31,10 +32,10 @@ if __name__ == '__main__':
                 start_row = last_row + 1
             
             # Paste data from the current cooked_sim_list
-            work_sheet.range(f'A{start_row}').options(header=False, index=False).value = oven.cooked_sim_list
+            work_sheet.range(f'A{start_row}').options(header=False, index=False).value = oven.cooked_list
 
             # Clear the DataFrame after pasting
-            oven.cooked_sim_list.drop(oven.cooked_sim_list.index, inplace=True)
+            oven.cooked_list.drop(oven.cooked_list.index, inplace=True)
 
 
 

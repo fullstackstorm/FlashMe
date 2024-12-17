@@ -7,7 +7,7 @@ class sim_oven:
     def __init__(self, excel_file):
         self.process = ''
         self.cooked_sim_list = pandas.DataFrame(columns = ['Folder ID', 'Issue Url', 'Title', 'Labels', 'Data Status', 'Operator Follow-up Miss', 'False Resolution Miss', 'SLA Miss', 'Associate Login', 'Resolver Identity'])
-        self.cooked_sim_list_ORSA = pandas.DataFrame(columns = ['Folder ID', 'Issue Url', 'Title', 'Labels', 'Data Status', 'Operator Follow-up Miss', 'False Resolution Miss', 'SLA Miss', 'Associate Login', 'Resolver Identity'])
+        self.cooked_sim_list_ORSA = pandas.DataFrame(columns = ['Folder ID', 'ID', 'Issue Url', 'Title', 'Labels', 'Next Step Action', 'Data Status', 'Operator Follow-up Miss', 'False Resolution Miss', 'SLA Miss', 'Associate Login', 'Resolver Identity'])
         self.cooked_list = None
         self.labels = label(excel_file)
         self._maxis = maxis()
@@ -23,19 +23,19 @@ class sim_oven:
             value_list = [str(entry.value) for entry in work_sheet['Process_Folder_Dictionary[Value]']]
             for key, value in zip(key_list, value_list): self.process_folder_dictionary[key] = value
 
-    def cook(self, process_name = '', iteration = 1):
+    def cook(self, iteration = 1):
         self.iteration = iteration
         if iteration == 1: 
             self._cooked_sim_list_row = 0
             self.running_total = 0
         self.checkpoint = 0
-        self.__init_sim_endpoint(process_name)
-        self.__cook(process_name)
+        self.__init_sim_endpoint()
+        self.__cook()
 
-    def __init_sim_endpoint(self, process_name):
+    def __init_sim_endpoint(self):
         process_id = (
-            self.process_folder_dictionary.get(process_name, '')
-            if process_name
+            self.process_folder_dictionary.get(self.process, '')
+            if self.process
             else '+OR+'.join(value for value in self.process_folder_dictionary.values())
         )
         
@@ -45,7 +45,6 @@ class sim_oven:
             '3a50ffcd-0084-4217-9b90-bbf0e3d8871f',
             'beadfedd-2c7c-4599-879f-93d435d27f34',
             '04e2cd43-f916-40bc-aba3-96936b05f4e5',
-            '226e8e9c-1486-451b-9609-07ef2c302b00',
             '2fa0a86d-3465-4e49-8d2f-8ed682f4e615',
             '1759e83f-4d79-4d80-ab46-b85ace8d9e85',
             '8cb7f94b-6805-422b-bf32-5f2238432840',
@@ -75,16 +74,18 @@ class sim_oven:
         folder_query = f'labels:({process_id})' if self.process == "ORSA_Dashboard" else f'containingFolder:({process_id})'
         status_query = '' if self.process == "ORSA_Dashboard" else "+status:(Resolved)"
         date_query = f'createDate:({date_range})'
-        title_exclusion = '-title:(partial OR pilot OR training OR test OR 2023 OR DSP Site'
+        title_exclusion = '-title:(partial OR pilot OR training OR test OR 2023 OR DSP Site)'
         label_exclusion = f'-label:({exclusion_query})'
         sort_query = 'sort=lastUpdatedDate+desc'
 
         self._sim_endpoint = f'issues?q={folder_query}{status_query}+{date_query}+{title_exclusion}+{label_exclusion}&{sort_query}'
 
-    def __cook(self, process_name):
+    def __cook(self):
+        valid_processes = {"ORSA_Valids", "ORSA_Invalids", "ORSA_Dashboard"}
+        self.cooked_list = self.cooked_sim_list_ORSA if self.process in valid_processes else self.cooked_sim_list
         while True:
             self.__update_raw_sim_list()
-            self.__cook_sims(process_name)
+            self.__cook_sims()
 
             if not self._start_token:
                 break
@@ -97,43 +98,75 @@ class sim_oven:
             self.checkpoint = 1
         self._start_token = f'&startToken={self._raw_sim_list['startToken']}' if self._raw_sim_list['startToken'] else ''
 
-    def __cook_sims(self, process_name):
+    def __cook_sims(self):
         for raw_sim in self._raw_sim_list['documents']:
+            valid_processes = {"ORSA_Valids", "ORSA_Invalids", "ORSA_Dashboard"}
+            
             issue_url = f'https://issues.amazon.com/issues/{raw_sim["aliases"][0]["id"]}'
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Folder ID'] = raw_sim['assignedFolder']
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Issue Url'] = issue_url
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Title'] = raw_sim['title']
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Labels'] = self.__cook_labels(raw_sim['labels'])
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Resolver Identity'] = raw_sim['lastResolvedByIdentity'].lower().removeprefix('kerberos:').removesuffix('@ant.amazon.com').strip()
+            self.cooked_list.at[self._cooked_sim_list_row, 'Folder ID'] = raw_sim['assignedFolder']
+            self.cooked_list.at[self._cooked_sim_list_row, 'Issue Url'] = issue_url
+            self.cooked_list.at[self._cooked_sim_list_row, 'Title'] = raw_sim['title']
+            self.cooked_list.at[self._cooked_sim_list_row, 'Labels'] = self.__cook_labels(raw_sim['labels'])
+            self.cooked_list.at[self._cooked_sim_list_row, 'Resolver Identity'] = (
+                raw_sim.get('lastResolvedByIdentity', '')
+                .lower()
+                .removeprefix('kerberos:')
+                .removesuffix('@ant.amazon.com')
+                .strip()
+            )
 
+
+            if self.process in valid_processes:
+                self.cooked_list.at[self._cooked_sim_list_row, 'Next Step Action'] = raw_sim['next_step']['action']
+            
             # Process custom fields if they exist
             if 'customFields' in raw_sim:
                 self.__process_custom_fields(raw_sim['customFields'])
 
             self._cooked_sim_list_row += 1
 
-        print(f'Downloaded {self._cooked_sim_list_row}/{self.running_total} {process_name} SIMs | iteration {self.iteration}')
+        print(f'Downloaded {self._cooked_sim_list_row}/{self.running_total} {self.process} SIMs | iteration {self.iteration}')
 
     def __process_custom_fields(self, custom_fields):
+        valid_processes = {"ORSA_Valids", "ORSA_Invalids", "ORSA_Dashboard"}
         if 'checkbox' in custom_fields:
             for checkbox in custom_fields['checkbox']:
                 checked_values = self.__cook_checkboxes(checkbox)
                 checkbox_id = checkbox['id']
 
                 if checkbox_id in {'operator_follow_up_miss', 'operator_follow_up_miss_', 'opertor_follow_up_miss'}:
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'Operator Follow-up Miss'] = checked_values
+                    self.cooked_list.at[self._cooked_sim_list_row, 'Operator Follow-up Miss'] = checked_values
                 elif checkbox_id in {'false_resolution', 'miss', 'false_resolution_miss'}:
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values
+                    self.cooked_list.at[self._cooked_sim_list_row, 'False Resolution Miss'] = checked_values
                 elif checkbox_id == 'sla_miss':
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] += checked_values + ", "
+                    self.cooked_list.at[self._cooked_sim_list_row, 'SLA Miss'] = checked_values + ", "
                 elif checkbox_id == 'data_status':
-                    self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] += checked_values + ", "
+                    self.cooked_list.at[self._cooked_sim_list_row, 'Data Status'] = checked_values + ", "
 
         if 'string' in custom_fields:
             string_fields = custom_fields['string']
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Data Status'] += self.__cook_data_status(string_fields)
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'SLA Miss'] += self.__cook_string_sla_miss(string_fields)
-            self.cooked_sim_list.at[self._cooked_sim_list_row, 'Associate Login'] = self.__cook_aa_login(string_fields)
+            # Ensure Data Status is a string before appending
+            current_data_status = self.cooked_list.at[self._cooked_sim_list_row, 'Data Status']
+            new_data_status = str(self.__cook_data_status(string_fields))
+
+            # Avoid NaN by converting to empty string if necessary
+            current_data_status = '' if pandas.isna(current_data_status) else str(current_data_status)
+            self.cooked_list.at[self._cooked_sim_list_row, 'Data Status'] = current_data_status + new_data_status
+
+            # Ensure SLA Miss is a string before appending
+            current_sla_miss = self.cooked_list.at[self._cooked_sim_list_row, 'SLA Miss']
+            new_sla_miss = str(self.__cook_string_sla_miss(string_fields))
+
+            # Avoid NaN by converting to empty string if necessary
+            current_sla_miss = '' if pandas.isna(current_sla_miss) else str(current_sla_miss)
+            self.cooked_list.at[self._cooked_sim_list_row, 'SLA Miss'] = current_sla_miss + new_sla_miss
+
+            self.cooked_list.at[self._cooked_sim_list_row, 'Associate Login'] = self.__cook_aa_login(string_fields)
+            if self.process in valid_processes:
+                self.cooked_list.at[self._cooked_sim_list_row, 'ID'] = next(
+                    (field.get("value") for field in string_fields if field["id"] == "contact_id"),
+                    None
+                )
 
     def __cook_labels(self, label_id_list):
         cooked_labels = new_label_id_list = ''
